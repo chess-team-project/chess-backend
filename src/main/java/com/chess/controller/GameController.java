@@ -1,5 +1,6 @@
 package com.chess.controller;
 
+import com.chess.dto.CreateGameRequest;
 import com.chess.dto.DrawAcceptRequest;
 import com.chess.dto.DrawOfferRequest;
 import com.chess.model.GameState;
@@ -24,6 +25,29 @@ public class GameController {
     public GameController(GameRepository gameRepository, ChessGameService chessGameService) {
         this.gameRepository = gameRepository;
         this.chessGameService = chessGameService;
+    }
+
+    /**
+     * POST /api/game
+     * Создать новую игру
+     */
+    @PostMapping
+    public ResponseEntity<?> createGame(@Valid @RequestBody CreateGameRequest request) {
+        try {
+            GameState newGame = chessGameService.createNewGame(
+                    request.getWhitePlayerId(),
+                    request.getBlackPlayerId()
+            );
+            gameRepository.save(newGame);
+            
+            return ResponseEntity.ok(Map.of(
+                    "message", "Game created",
+                    "gameState", newGame
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
