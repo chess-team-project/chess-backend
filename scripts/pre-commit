@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Pre-commit hook для проверки кода перед коммитом
+# Проверяет компиляцию проекта
+
+echo "Running pre-commit checks..."
+
+# Переходим в корень проекта
+cd "$(git rev-parse --show-toplevel)"
+
+# Проверяем компиляцию
+echo "Checking compilation..."
+if ! mvn clean compile -q > /dev/null 2>&1; then
+    echo "❌ Compilation failed! Please fix errors before committing."
+    echo "Run 'mvn clean compile' to see details."
+    exit 1
+fi
+
+echo "✅ Pre-commit checks passed!"
+exit 0
+
