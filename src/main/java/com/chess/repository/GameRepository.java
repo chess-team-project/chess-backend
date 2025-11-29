@@ -1,6 +1,6 @@
 package com.chess.repository;
 
-import com.chess.model.GameState;
+import com.github.bhlangonijr.chesslib.Board;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
@@ -22,9 +22,9 @@ public class GameRepository {
     /**
      * Сохраняет или обновляет игру
      */
-    public GameState save(String gameId, Board board) {
+    public Board save(String gameId, Board board) {
         if (gameId == null) {
-            throw new IllegalArgumentException("board must have a valid gameId");
+            throw new IllegalArgumentException("gameId must not be null");
         }
         games.put(gameId, board);
         return board;
@@ -45,10 +45,20 @@ public class GameRepository {
     }
 
     /**
+     * Обновляет игру
+     */
+    public Board update(String gameId, Board board) {
+        if (!games.containsKey(gameId)) {
+            throw new IllegalArgumentException("Game not found: " + gameId);
+        }
+        games.put(gameId, board);
+        return board;
+    }
+
+    /**
      * Удаляет игру
      */
     public void deleteById(String gameId) {
         games.remove(gameId);
     }
 }
-
