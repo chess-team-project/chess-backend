@@ -114,7 +114,116 @@ POST /api/game/create/player123
 
 ---
 
-### 4. Offer Draw
+### 4. Get Game State
+
+#### `GET /api/game/state/{id}`
+Получить текущее состояние игры по ID.
+
+**Headers:**
+- `Authorization: sfhasdjf`
+
+**Path Parameters:**
+- `id` (String) - ID игры
+
+**Request Example:**
+```
+GET /api/game/state/550e8400-e29b-41d4-a716-446655440000
+Headers:
+  Authorization: sfhasdjf
+```
+
+**Response:**
+```json
+{
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "legalMoves": [
+    "a2a3", "a2a4", "b2b3", "b2b4", "c2c3", "c2c4",
+    "d2d3", "d2d4", "e2e3", "e2e4", "f2f3", "f2f4",
+    "g2g3", "g2g4", "h2h3", "h2h4", "b1a3", "b1c3",
+    "g1f3", "g1h3"
+  ]
+}
+```
+
+**Response Fields:**
+- `fen` (String) - Текущая позиция в формате FEN
+- `legalMoves` (Array<String>) - Массив легальных ходов для текущего игрока в формате "e2e4" (from-to)
+
+**Status Codes:**
+- `200 OK` - Состояние игры получено успешно
+- `400 Bad Request` - Игра не найдена или произошла ошибка
+
+---
+
+### 5. Make Move
+
+#### `POST /api/game/move/{id}`
+Выполнить ход в игре.
+
+**Headers:**
+- `Authorization: sfhasdjf`
+- `Content-Type: application/json`
+
+**Path Parameters:**
+- `id` (String) - ID игры
+
+**Request Body:**
+```json
+{
+  "move": "e2e4"
+}
+```
+
+**Request Example:**
+```
+POST /api/game/move/550e8400-e29b-41d4-a716-446655440000
+Headers:
+  Authorization: sfhasdjf
+  Content-Type: application/json
+
+Body:
+{
+  "move": "e2e4"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+  "legalMoves": [
+    "a7a6", "a7a5", "b7b6", "b7b5", "c7c6", "c7c5",
+    "d7d6", "d7d5", "e7e6", "e7e5", "f7f6", "f7f5",
+    "g7g6", "g7g5", "h7h6", "h7h5", "b8a6", "b8c6",
+    "g8f6", "g8h6"
+  ]
+}
+```
+
+**Response (Error):**
+```json
+{
+  "error": "Недопустимый ход: e2e5"
+}
+```
+
+**Response Fields:**
+- `fen` (String) - Новая позиция после хода в формате FEN
+- `legalMoves` (Array<String>) - Массив легальных ходов для следующего игрока (после применения хода)
+- `error` (String) - Сообщение об ошибке, если ход невалидный
+
+**Status Codes:**
+- `200 OK` - Ход выполнен успешно
+- `400 Bad Request` - Игра не найдена, ход невалидный или произошла ошибка
+
+**Move Format:**
+- Ход должен быть в формате "e2e4" (4 символа: from-to)
+- Первые 2 символа - начальная позиция (например, "e2")
+- Последние 2 символа - конечная позиция (например, "e4")
+
+---
+
+### 6. Offer Draw
 
 #### `POST /api/game/{gameId}/draw/offer`
 Предложить ничью в текущей игре.
@@ -154,7 +263,7 @@ Headers:
 
 ---
 
-### 5. Accept Draw
+### 7. Accept Draw
 
 #### `POST /api/game/{gameId}/draw/accept`
 Принять предложение ничьей.
@@ -255,6 +364,20 @@ Headers:
 ```bash
 curl -X POST http://localhost:8080/api/game/create/player123 \
   -H "Authorization: sfhasdjf"
+```
+
+### Получение состояния игры
+```bash
+curl -X GET http://localhost:8080/api/game/state/{gameId} \
+  -H "Authorization: sfhasdjf"
+```
+
+### Выполнение хода
+```bash
+curl -X POST http://localhost:8080/api/game/move/{gameId} \
+  -H "Authorization: sfhasdjf" \
+  -H "Content-Type: application/json" \
+  -d '{"move": "e2e4"}'
 ```
 
 ### Предложение ничьей
