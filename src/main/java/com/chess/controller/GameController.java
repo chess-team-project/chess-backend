@@ -3,6 +3,7 @@ package com.chess.controller;
 import com.chess.dto.CreateGameRequest;
 import com.chess.dto.DrawAcceptRequest;
 import com.chess.dto.DrawOfferRequest;
+import com.chess.dto.MoveRequest;
 import com.chess.model.GameState;
 import com.chess.repository.GameRepository;
 import com.chess.service.ChessGameService;
@@ -132,6 +133,45 @@ public class GameController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Error getting game state: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * POST /api/game/move/{id}
+     * Выполнить ход в игре
+     * Принимает: {id, move}
+     * Возвращает: {new fen, legal actions for next player(after move applied)} | {error}
+     */
+    @PostMapping("/move/{id}")
+    public ResponseEntity<?> makeMove(
+            @PathVariable String id,
+            @Valid @RequestBody MoveRequest moveRequest) {
+        
+        try {
+            GameState gameState = gameRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Game not found: " + id));
+            
+            // Парсим ход из формата "e2e4"
+            String fromSquare = moveRequest.getFromSquare();
+            String toSquare = moveRequest.getToSquare();
+            
+            // Выполняем ход
+            GameState updatedState = chessGameService.makeMove(gameState, fromSquare, toSquare);
+            gameRepository.update(id, updatedState);
+            
+            // Получаем легальные ходы для следующего игрока (после хода)
+            List<String> legalMoves = chessGameService.getLegalMoves(updatedState.getFen());
+            
+            return ResponseEntity.ok(Map.of(
+                    "fen", updatedState.getFen(),
+                    "legalMoves", legalMoves
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Error making move: " + e.getMessage()));
         }
     }
 
