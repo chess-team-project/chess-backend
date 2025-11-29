@@ -109,6 +109,33 @@ public class GameController {
     }
 
     /**
+     * GET /api/game/state/{id}
+     * Получить состояние игры по ID
+     * Возвращает: {fen, legal actions for current player}
+     */
+    @GetMapping("/state/{id}")
+    public ResponseEntity<?> getGameState(@PathVariable String id) {
+        try {
+            GameState gameState = gameRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Game not found: " + id));
+            
+            // Получаем легальные ходы для текущего игрока
+            List<String> legalMoves = chessGameService.getLegalMoves(gameState.getFen());
+            
+            return ResponseEntity.ok(Map.of(
+                    "fen", gameState.getFen(),
+                    "legalMoves", legalMoves
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Error getting game state: " + e.getMessage()));
+        }
+    }
+
+    /**
      * POST /api/game/{gameId}/draw/accept
      * Принять предложение ничьей
      */
