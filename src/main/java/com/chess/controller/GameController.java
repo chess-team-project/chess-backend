@@ -6,6 +6,8 @@ import com.chess.dto.DrawOfferRequest;
 import com.chess.model.GameState;
 import com.chess.repository.GameRepository;
 import com.chess.service.ChessGameService;
+import com.chess.util.AuthUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,10 +23,12 @@ public class GameController {
 
     private final GameRepository gameRepository;
     private final ChessGameService chessGameService;
+    private final AuthUtil authUtil;
 
-    public GameController(GameRepository gameRepository, ChessGameService chessGameService) {
+    public GameController(GameRepository gameRepository, ChessGameService chessGameService, AuthUtil authUtil) {
         this.gameRepository = gameRepository;
         this.chessGameService = chessGameService;
+        this.authUtil = authUtil;
     }
 
     /**
@@ -57,13 +61,14 @@ public class GameController {
     @PostMapping("/{gameId}/draw/offer")
     public ResponseEntity<?> offerDraw(
             @PathVariable String gameId,
-            @Valid @RequestBody DrawOfferRequest request) {
+            HttpServletRequest request) {
         
         GameState gameState = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
 
         try {
-            GameState updatedState = chessGameService.offerDraw(gameState, request.getPlayerId());
+            String playerId = authUtil.getPlayerId(request);
+            GameState updatedState = chessGameService.offerDraw(gameState, playerId);
             gameRepository.update(gameId, updatedState);
             
             return ResponseEntity.ok(Map.of(
@@ -83,13 +88,14 @@ public class GameController {
     @PostMapping("/{gameId}/draw/accept")
     public ResponseEntity<?> acceptDraw(
             @PathVariable String gameId,
-            @Valid @RequestBody DrawAcceptRequest request) {
+            HttpServletRequest request) {
         
         GameState gameState = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
 
         try {
-            GameState updatedState = chessGameService.acceptDraw(gameState, request.getPlayerId());
+            String playerId = authUtil.getPlayerId(request);
+            GameState updatedState = chessGameService.acceptDraw(gameState, playerId);
             gameRepository.update(gameId, updatedState);
             
             return ResponseEntity.ok(Map.of(
