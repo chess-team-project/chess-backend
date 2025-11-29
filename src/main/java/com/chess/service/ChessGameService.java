@@ -6,9 +6,14 @@ import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
+import com.github.bhlangonijr.chesslib.move.MoveGenerator;
+import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Сервис для работы с шахматными играми через chesslib
@@ -194,6 +199,43 @@ public class ChessGameService {
             return Side.BLACK;
         }
         return null;
+    }
+
+    /**
+     * Создает новую игру для одного игрока (игрок играет белыми)
+     * Второй игрок будет назначен позже
+     */
+    public GameState createGameForPlayer(String playerId) {
+        Board board = new Board();
+        
+        GameState gameState = new GameState();
+        gameState.setId(UUID.randomUUID().toString());
+        gameState.setFen(board.getFen());
+        gameState.setTurn(board.getSideToMove());
+        gameState.setStatus(GameStatus.IN_PROGRESS);
+        gameState.setWhitePlayerId(playerId);
+        gameState.setBlackPlayerId(null); // Будет назначен позже
+        
+        return gameState;
+    }
+
+    /**
+     * Получает список легальных ходов для текущего игрока в формате "e2e4"
+     */
+    public List<String> getLegalMoves(String fen) {
+        try {
+            Board board = new Board();
+            board.loadFromFen(fen);
+            
+            List<Move> legalMoves = MoveGenerator.generateLegalMoves(board);
+            
+            return legalMoves.stream()
+                    .map(move -> move.getFrom().toString().toLowerCase() + 
+                                move.getTo().toString().toLowerCase())
+                    .collect(Collectors.toList());
+        } catch (MoveGeneratorException e) {
+            throw new RuntimeException("Error generating legal moves: " + e.getMessage(), e);
+        }
     }
 }
 

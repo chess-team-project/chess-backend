@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,6 +48,32 @@ public class GameController {
             return ResponseEntity.ok(Map.of(
                     "message", "Game created",
                     "gameState", newGame
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * POST /api/game/create/:id
+     * Создать новую игру для игрока с указанным ID
+     * Возвращает: {gameId, fen, legal moves for current player}
+     */
+    @PostMapping("/create/{id}")
+    public ResponseEntity<?> createGameForPlayer(@PathVariable String id) {
+        try {
+            // Создаем игру для игрока
+            GameState newGame = chessGameService.createGameForPlayer(id);
+            gameRepository.save(newGame);
+            
+            // Получаем легальные ходы для текущего игрока
+            List<String> legalMoves = chessGameService.getLegalMoves(newGame.getFen());
+            
+            return ResponseEntity.ok(Map.of(
+                    "gameId", newGame.getId(),
+                    "fen", newGame.getFen(),
+                    "legalMoves", legalMoves
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
