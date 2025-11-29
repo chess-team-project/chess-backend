@@ -13,24 +13,27 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Repository
 public class GameRepository {
+    // {
+    //     'H5T6': new Board
+    // }
 
-    private final Map<String, GameState> games = new ConcurrentHashMap<>();
+    private final Map<String, Board> games = new ConcurrentHashMap<>();
 
     /**
      * Сохраняет или обновляет игру
      */
-    public GameState save(GameState gameState) {
-        if (gameState.getId() == null || gameState.getId().isEmpty()) {
-            throw new IllegalArgumentException("GameState must have a valid ID");
+    public GameState save(String gameId, Board board) {
+        if (gameId == null) {
+            throw new IllegalArgumentException("board must have a valid gameId");
         }
-        games.put(gameState.getId(), gameState);
-        return gameState;
+        games.put(gameId, board);
+        return board;
     }
 
     /**
      * Находит игру по ID
      */
-    public Optional<GameState> findById(String gameId) {
+    public Optional<Board> findById(String gameId) {
         return Optional.ofNullable(games.get(gameId));
     }
 
@@ -46,35 +49,6 @@ public class GameRepository {
      */
     public void deleteById(String gameId) {
         games.remove(gameId);
-    }
-
-    /**
-     * Возвращает все активные игры
-     */
-    public Map<String, GameState> findAll() {
-        return new ConcurrentHashMap<>(games);
-    }
-
-    /**
-     * Возвращает количество активных игр
-     */
-    public long count() {
-        return games.size();
-    }
-
-    /**
-     * Обновляет состояние игры атомарно
-     */
-    public GameState update(String gameId, GameState updatedState) {
-        if (!gameId.equals(updatedState.getId())) {
-            throw new IllegalArgumentException("Game ID mismatch");
-        }
-        return games.compute(gameId, (key, existing) -> {
-            if (existing == null) {
-                throw new IllegalArgumentException("Game not found: " + gameId);
-            }
-            return updatedState;
-        });
     }
 }
 

@@ -34,41 +34,16 @@ public class GameController {
     }
 
     /**
-     * POST /api/game
-     * Создать новую игру
-     */
-    @PostMapping
-    public ResponseEntity<?> createGame(@Valid @RequestBody CreateGameRequest request) {
-        try {
-            GameState newGame = chessGameService.createNewGame(
-                    request.getWhitePlayerId(),
-                    request.getBlackPlayerId()
-            );
-            gameRepository.save(newGame);
-            
-            return ResponseEntity.ok(Map.of(
-                    "message", "Game created",
-                    "gameState", newGame
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
      * POST /api/game/create/:id
-     * Создать новую игру для игрока с указанным ID
+     * Создать новую игру с указанным ID
      * Возвращает: {gameId, fen, legal moves for current player}
      */
     @PostMapping("/create/{id}")
-    public ResponseEntity<?> createGameForPlayer(@PathVariable String id) {
+    public ResponseEntity<?> createGame(@PathVariable String gameId) {
         try {
-            // Создаем игру для игрока
-            GameState newGame = chessGameService.createGameForPlayer(id);
-            gameRepository.save(newGame);
+            Board newGame = chessGameService.createGame(gameId);
+            gameRepository.save(gameId, newGame);
             
-            // Получаем легальные ходы для текущего игрока
             List<String> legalMoves = chessGameService.getLegalMoves(newGame.getFen());
             
             return ResponseEntity.ok(Map.of(
@@ -83,33 +58,6 @@ public class GameController {
     }
 
     /**
-     * POST /api/game/{gameId}/draw/offer
-     * Предложить ничью
-     */
-    @PostMapping("/{gameId}/draw/offer")
-    public ResponseEntity<?> offerDraw(
-            @PathVariable String gameId,
-            HttpServletRequest request) {
-        
-        GameState gameState = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
-
-        try {
-            String playerId = authUtil.getPlayerId(request);
-            GameState updatedState = chessGameService.offerDraw(gameState, playerId);
-            gameRepository.update(gameId, updatedState);
-            
-            return ResponseEntity.ok(Map.of(
-                    "message", "Draw offer made",
-                    "gameState", updatedState
-            ));
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
      * GET /api/game/state/{id}
      * Получить состояние игры по ID
      * Возвращает: {fen, legal actions for current player}
@@ -117,7 +65,7 @@ public class GameController {
     @GetMapping("/state/{id}")
     public ResponseEntity<?> getGameState(@PathVariable String id) {
         try {
-            GameState gameState = gameRepository.findById(id)
+            Board gameState = gameRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Game not found: " + id));
             
             // Получаем легальные ходы для текущего игрока
@@ -148,7 +96,7 @@ public class GameController {
             @Valid @RequestBody MoveRequest moveRequest) {
         
         try {
-            GameState gameState = gameRepository.findById(id)
+            Board gameState = gameRepository.findById(id) // <-- Board type
                     .orElseThrow(() -> new IllegalArgumentException("Game not found: " + id));
             
             // Парсим ход из формата "e2e4"
@@ -175,31 +123,6 @@ public class GameController {
         }
     }
 
-    /**
-     * POST /api/game/{gameId}/draw/accept
-     * Принять предложение ничьей
-     */
-    @PostMapping("/{gameId}/draw/accept")
-    public ResponseEntity<?> acceptDraw(
-            @PathVariable String gameId,
-            HttpServletRequest request) {
-        
-        GameState gameState = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
-
-        try {
-            String playerId = authUtil.getPlayerId(request);
-            GameState updatedState = chessGameService.acceptDraw(gameState, playerId);
-            gameRepository.update(gameId, updatedState);
-            
-            return ResponseEntity.ok(Map.of(
-                    "message", "Draw accepted",
-                    "gameState", updatedState
-            ));
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
+   
 }
 
