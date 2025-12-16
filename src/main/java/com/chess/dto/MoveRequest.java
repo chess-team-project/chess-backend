@@ -9,7 +9,8 @@ import jakarta.validation.constraints.Pattern;
 public class MoveRequest {
 
     @NotBlank(message = "Move is required")
-    @Pattern(regexp = "^[a-h][1-8][a-h][1-8]$", message = "Move must be in format 'e2e4' (from-to)")
+    @Pattern(regexp = "^[a-h][1-8][a-h][1-8]([nbrqNBRQ])?$",
+             message = "Move must be like 'e2e4' or 'e7e8q' (optional promotion)")
     private String move;
 
     public MoveRequest() {
@@ -45,6 +46,16 @@ public class MoveRequest {
             throw new IllegalArgumentException("Invalid move format");
         }
         return move.substring(2, 4);
+    }
+
+    /**
+     * Якщо є символ промоції (5-й символ), повертає його у нижньому регістрі, інакше null
+     */
+    public Character getPromotionChar() {
+        if (move != null && move.length() == 5) {
+            return Character.toLowerCase(move.charAt(4));
+        }
+        return null;
     }
 }
 

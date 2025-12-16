@@ -2,7 +2,7 @@ package com.chess.service;
 
 import com.chess.model.GameState;
 import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.Square;
+import java.util.Locale;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
@@ -34,24 +34,41 @@ public class ChessGameService {
      * @param toSquare конечная позиция (например "e4")
      * @return GameState с обновленным FEN
      */
-    public GameState makeMove(Board board, String fromSquare, String toSquare) {
-        // Конвертируем строки в Square
-        Square from = Square.valueOf(fromSquare.toUpperCase());
-        Square to = Square.valueOf(toSquare.toUpperCase());
-        
-        Move move = new Move(from, to);
-        
-        if (!board.isMoveLegal(move, true)) {
-            throw new IllegalArgumentException("Недопустимый ход: " + fromSquare + "-" + toSquare);
+    /**
+     * Выполняет ход и обновляет состояние игры. Принимает ход в формате "e2e4" или "e7e8q" (промоция).
+     * @param board текущая доска
+     * @param moveStr ход в виде строки
+     * @return GameState с обновленным FEN
+     */
+    public GameState makeMove(Board board, String moveStr) {
+        try {
+            List<Move> legalMoves = MoveGenerator.generateLegalMoves(board);
+
+            String normalized = moveStr.toLowerCase(Locale.ROOT);
+
+            Move selected = legalMoves.stream()
+                    .filter(m -> {
+                        String s = m.getFrom().toString().toLowerCase() + m.getTo().toString().toLowerCase();
+                        if (m.getPromotion() != null) {
+                            String promo = m.getPromotion().toString().toLowerCase();
+                            if (promo.contains("queen")) s += "q";
+                            else if (promo.contains("rook")) s += "r";
+                            else if (promo.contains("bishop")) s += "b";
+                            else if (promo.contains("knight")) s += "n";
+                        }
+                        return s.equals(normalized);
+                    })
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Недопустимый ход: " + moveStr));
+
+            board.doMove(selected);
+
+            GameState updatedState = new GameState();
+            updatedState.setFen(board.getFen());
+            return updatedState;
+        } catch (MoveGeneratorException e) {
+            throw new RuntimeException("Error generating legal moves: " + e.getMessage(), e);
         }
-        
-        board.doMove(move);
-        
-        // Создаем GameState с новым FEN
-        GameState updatedState = new GameState();
-        updatedState.setFen(board.getFen());
-        
-        return updatedState;
     }
 
     /**
@@ -63,12 +80,22 @@ public class ChessGameService {
         try {
             Board board = new Board();
             board.loadFromFen(fen);
-            
+
             List<Move> legalMoves = MoveGenerator.generateLegalMoves(board);
-            
+
             return legalMoves.stream()
-                    .map(move -> move.getFrom().toString().toLowerCase() + 
-                                move.getTo().toString().toLowerCase())
+                    .map(move -> {
+                        String s = move.getFrom().toString().toLowerCase() +
+                                move.getTo().toString().toLowerCase();
+                        if (move.getPromotion() != null) {
+                            String promo = move.getPromotion().toString().toLowerCase();
+                            if (promo.contains("queen")) s += "q";
+                            else if (promo.contains("rook")) s += "r";
+                            else if (promo.contains("bishop")) s += "b";
+                            else if (promo.contains("knight")) s += "n";
+                        }
+                        return s;
+                    })
                     .collect(Collectors.toList());
         } catch (MoveGeneratorException e) {
             throw new RuntimeException("Error generating legal moves: " + e.getMessage(), e);

@@ -93,12 +93,10 @@ public class GameController {
             Board gameBoard = gameRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("Game not found: " + id));
             
-            // Парсим ход из формата "e2e4"
-            String fromSquare = moveRequest.getFromSquare();
-            String toSquare = moveRequest.getToSquare();
+            // Используем весь строковый ход (включая возможную промоцію)
+            String moveStr = moveRequest.getMove();
             
-            // Выполняем ход
-            GameState updatedState = chessGameService.makeMove(gameBoard, fromSquare, toSquare);
+            GameState updatedState = chessGameService.makeMove(gameBoard, moveStr);
             
             // Обновляем доску с новым FEN
             Board updatedBoard = new Board();
