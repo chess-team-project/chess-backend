@@ -1,6 +1,6 @@
 package com.chess.repository;
 
-import com.chess.model.GameState;
+import com.github.bhlangonijr.chesslib.Board;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
@@ -13,24 +13,27 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Repository
 public class GameRepository {
+    // {
+    //     'H5T6': new Board
+    // }
 
-    private final Map<String, GameState> games = new ConcurrentHashMap<>();
+    private final Map<String, Board> games = new ConcurrentHashMap<>();
 
     /**
      * Сохраняет или обновляет игру
      */
-    public GameState save(GameState gameState) {
-        if (gameState.getId() == null || gameState.getId().isEmpty()) {
-            throw new IllegalArgumentException("GameState must have a valid ID");
+    public Board save(String gameId, Board board) {
+        if (gameId == null) {
+            throw new IllegalArgumentException("gameId must not be null");
         }
-        games.put(gameState.getId(), gameState);
-        return gameState;
+        games.put(gameId, board);
+        return board;
     }
 
     /**
      * Находит игру по ID
      */
-    public Optional<GameState> findById(String gameId) {
+    public Optional<Board> findById(String gameId) {
         return Optional.ofNullable(games.get(gameId));
     }
 
@@ -42,39 +45,20 @@ public class GameRepository {
     }
 
     /**
+     * Обновляет игру
+     */
+    public Board update(String gameId, Board board) {
+        if (!games.containsKey(gameId)) {
+            throw new IllegalArgumentException("Game not found: " + gameId);
+        }
+        games.put(gameId, board);
+        return board;
+    }
+
+    /**
      * Удаляет игру
      */
     public void deleteById(String gameId) {
         games.remove(gameId);
     }
-
-    /**
-     * Возвращает все активные игры
-     */
-    public Map<String, GameState> findAll() {
-        return new ConcurrentHashMap<>(games);
-    }
-
-    /**
-     * Возвращает количество активных игр
-     */
-    public long count() {
-        return games.size();
-    }
-
-    /**
-     * Обновляет состояние игры атомарно
-     */
-    public GameState update(String gameId, GameState updatedState) {
-        if (!gameId.equals(updatedState.getId())) {
-            throw new IllegalArgumentException("Game ID mismatch");
-        }
-        return games.compute(gameId, (key, existing) -> {
-            if (existing == null) {
-                throw new IllegalArgumentException("Game not found: " + gameId);
-            }
-            return updatedState;
-        });
-    }
 }
-

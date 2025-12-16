@@ -1,18 +1,14 @@
 package com.chess.service;
 
 import com.chess.model.GameState;
-import com.chess.model.GameStatus;
 import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -23,46 +19,22 @@ public class ChessGameService {
 
     /**
      * Создает новую игру со стартовой позицией
+     * @param gameId ID игры
+     * @return Board с начальной позицией
      */
-    public GameState createNewGame(String whitePlayerId, String blackPlayerId) {
+    public Board createGame(String gameId) {
         Board board = new Board();
-        
-        GameState gameState = new GameState();
-        gameState.setId(UUID.randomUUID().toString());
-        gameState.setFen(board.getFen());
-        gameState.setTurn(board.getSideToMove());
-        gameState.setStatus(GameStatus.IN_PROGRESS);
-        gameState.setWhitePlayerId(whitePlayerId);
-        gameState.setBlackPlayerId(blackPlayerId);
-        
-        return gameState;
-    }
-
-    /**
-     * Создает игру из FEN строки
-     */
-    public GameState createGameFromFen(String fen, String whitePlayerId, String blackPlayerId) {
-        Board board = new Board();
-        board.loadFromFen(fen);
-        
-        GameState gameState = new GameState();
-        gameState.setId(UUID.randomUUID().toString());
-        gameState.setFen(board.getFen());
-        gameState.setTurn(board.getSideToMove());
-        gameState.setStatus(determineGameStatus(board));
-        gameState.setWhitePlayerId(whitePlayerId);
-        gameState.setBlackPlayerId(blackPlayerId);
-        
-        return gameState;
+        return board;
     }
 
     /**
      * Выполняет ход и обновляет состояние игры
+     * @param board текущая доска
+     * @param fromSquare начальная позиция (например "e2")
+     * @param toSquare конечная позиция (например "e4")
+     * @return GameState с обновленным FEN
      */
-    public GameState makeMove(GameState currentState, String fromSquare, String toSquare) {
-        Board board = new Board();
-        board.loadFromFen(currentState.getFen());
-        
+    public GameState makeMove(Board board, String fromSquare, String toSquare) {
         // Конвертируем строки в Square
         Square from = Square.valueOf(fromSquare.toUpperCase());
         Square to = Square.valueOf(toSquare.toUpperCase());
@@ -75,152 +47,17 @@ public class ChessGameService {
         
         board.doMove(move);
         
-        // Обновляем состояние
+        // Создаем GameState с новым FEN
         GameState updatedState = new GameState();
-        updatedState.setId(currentState.getId());
         updatedState.setFen(board.getFen());
-        updatedState.setTurn(board.getSideToMove());
-        updatedState.setStatus(determineGameStatus(board));
-        updatedState.setCreatedAt(currentState.getCreatedAt());
-        updatedState.setLastMoveAt(java.time.Instant.now());
-        updatedState.setWhitePlayerId(currentState.getWhitePlayerId());
-        updatedState.setBlackPlayerId(currentState.getBlackPlayerId());
-        updatedState.setDrawOfferFrom(null); // Сбрасываем предложение ничьей после хода
         
         return updatedState;
-    }
-
-    /**
-     * Определяет статус игры на основе состояния доски
-     */
-    private GameStatus determineGameStatus(Board board) {
-        if (board.isMated()) {
-            return GameStatus.CHECKMATE;
-        } else if (board.isStaleMate()) {
-            return GameStatus.STALEMATE;
-        } else if (board.isDraw()) {
-            return GameStatus.DRAW;
-        } else {
-            return GameStatus.IN_PROGRESS;
-        }
-    }
-
-    /**
-     * Обновляет состояние игры на основе текущего FEN
-     * (полезно для синхронизации состояния)
-     */
-    public GameState updateGameState(GameState currentState) {
-        Board board = new Board();
-        board.loadFromFen(currentState.getFen());
-        
-        GameState updatedState = new GameState();
-        updatedState.setId(currentState.getId());
-        updatedState.setFen(board.getFen());
-        updatedState.setTurn(board.getSideToMove());
-        updatedState.setStatus(determineGameStatus(board));
-        updatedState.setCreatedAt(currentState.getCreatedAt());
-        updatedState.setLastMoveAt(currentState.getLastMoveAt());
-        updatedState.setWhitePlayerId(currentState.getWhitePlayerId());
-        updatedState.setBlackPlayerId(currentState.getBlackPlayerId());
-        updatedState.setDrawOfferFrom(currentState.getDrawOfferFrom());
-        
-        return updatedState;
-    }
-
-    /**
-     * Предлагает ничью от указанного игрока
-     */
-    public GameState offerDraw(GameState currentState, String playerId) {
-        Side playerSide = getPlayerSide(currentState, playerId);
-        if (playerSide == null) {
-            throw new IllegalArgumentException("Player is not part of this game");
-        }
-
-        if (currentState.getStatus() != GameStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Game is not in progress");
-        }
-
-        GameState updatedState = new GameState();
-        updatedState.setId(currentState.getId());
-        updatedState.setFen(currentState.getFen());
-        updatedState.setTurn(currentState.getTurn());
-        updatedState.setStatus(currentState.getStatus());
-        updatedState.setCreatedAt(currentState.getCreatedAt());
-        updatedState.setLastMoveAt(currentState.getLastMoveAt());
-        updatedState.setWhitePlayerId(currentState.getWhitePlayerId());
-        updatedState.setBlackPlayerId(currentState.getBlackPlayerId());
-        updatedState.setDrawOfferFrom(playerSide);
-
-        return updatedState;
-    }
-
-    /**
-     * Принимает предложение ничьей
-     */
-    public GameState acceptDraw(GameState currentState, String playerId) {
-        Side playerSide = getPlayerSide(currentState, playerId);
-        if (playerSide == null) {
-            throw new IllegalArgumentException("Player is not part of this game");
-        }
-
-        if (currentState.getStatus() != GameStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Game is not in progress");
-        }
-
-        if (currentState.getDrawOfferFrom() == null) {
-            throw new IllegalStateException("No draw offer exists");
-        }
-
-        if (currentState.getDrawOfferFrom() == playerSide) {
-            throw new IllegalStateException("Cannot accept your own draw offer");
-        }
-
-        GameState updatedState = new GameState();
-        updatedState.setId(currentState.getId());
-        updatedState.setFen(currentState.getFen());
-        updatedState.setTurn(currentState.getTurn());
-        updatedState.setStatus(GameStatus.DRAW);
-        updatedState.setCreatedAt(currentState.getCreatedAt());
-        updatedState.setLastMoveAt(java.time.Instant.now());
-        updatedState.setWhitePlayerId(currentState.getWhitePlayerId());
-        updatedState.setBlackPlayerId(currentState.getBlackPlayerId());
-        updatedState.setDrawOfferFrom(null);
-
-        return updatedState;
-    }
-
-    /**
-     * Определяет сторону игрока (WHITE или BLACK)
-     */
-    private Side getPlayerSide(GameState gameState, String playerId) {
-        if (playerId.equals(gameState.getWhitePlayerId())) {
-            return Side.WHITE;
-        } else if (playerId.equals(gameState.getBlackPlayerId())) {
-            return Side.BLACK;
-        }
-        return null;
-    }
-
-    /**
-     * Создает новую игру для одного игрока (игрок играет белыми)
-     * Второй игрок будет назначен позже
-     */
-    public GameState createGameForPlayer(String playerId) {
-        Board board = new Board();
-        
-        GameState gameState = new GameState();
-        gameState.setId(UUID.randomUUID().toString());
-        gameState.setFen(board.getFen());
-        gameState.setTurn(board.getSideToMove());
-        gameState.setStatus(GameStatus.IN_PROGRESS);
-        gameState.setWhitePlayerId(playerId);
-        gameState.setBlackPlayerId(null); // Будет назначен позже
-        
-        return gameState;
     }
 
     /**
      * Получает список легальных ходов для текущего игрока в формате "e2e4"
+     * @param fen текущая позиция в формате FEN
+     * @return список легальных ходов
      */
     public List<String> getLegalMoves(String fen) {
         try {
@@ -238,4 +75,3 @@ public class ChessGameService {
         }
     }
 }
-
